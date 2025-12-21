@@ -1,5 +1,5 @@
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace lc::p0944 {
 int minDeletionSize(const std::vector<std::string>& strs) {
@@ -15,7 +15,7 @@ int minDeletionSize(const std::vector<std::string>& strs) {
 
     return result;
 }
-} //namespace lc::p0944
+}  // namespace lc::p0944
 
 #if defined(LC_ENABLE_TESTS) && LC_ENABLE_TESTS
 #include <gtest/gtest.h>
