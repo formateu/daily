@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.toolchain.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - name: gcc-15.2
+            image: gcc:15.2
+            cc: gcc
+            cxx: g++
+          - name: clang-20
+            image: silkeh/clang:20
+            cc: clang
+            cxx: clang++
+
+    container:
+      image: ${{ matrix.toolchain.image }}
+
+    steps:
+      # W jobie kontenerowym musisz doinstalować narzędzia buildowe (i git do checkout).
+      - name: Install build deps
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates \
+            cmake ninja-build ccache
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure ccache
+        run: |
+          ccache --set-config=cache_dir=${GITHUB_WORKSPACE}/.ccache
+          ccache --set-config=max_size=300M
+          ccache --zero-stats
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ matrix.toolchain.name }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json', 'src/**/*.cpp', 'src/**/*.h', 'tests/**/*.cpp', 'tests/**/*.h') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.toolchain.name }}-
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.toolchain.cc }}
+          CXX: ${{ matrix.toolchain.cxx }}
+        run: |
+          cmake -S ./leetcode/cpp -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=${CC} \
+            -DCMAKE_CXX_COMPILER=${CXX} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DLC_ENABLE_WERROR=ON
+
+      - name: Build
+        run: cmake --build build -- -k 0
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
