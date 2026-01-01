@@ -22,6 +22,10 @@ file(GLOB_RECURSE LC_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/*/src/*.cpp"
 )
 
+# Exclude glsync_dump directory from sources (e.g., dumped/backup files)
+# This removes any path that contains 'glsync_dump' from LC_SOURCES
+list(FILTER LC_SOURCES EXCLUDE REGEX ".*/glsync_dump/.*")
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
